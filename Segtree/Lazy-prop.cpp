@@ -1,72 +1,67 @@
 struct item {
-    long long v;
+    ll v;
 };
- 
+
 struct segtree {
-    vector<item> operations;
-    item NO_OP = {LLONG_MAX};
-    item NE = {0};
+    vector<item> seg, lazy;
+    item NE = {inf};
     int sz = 1;
- 
+
     void init(int n) {
         while (sz < n)
             sz *= 2;
-        operations.assign(2 * sz, {NE});
+        seg.assign(2 * sz, {0LL});
+        lazy.assign(2 * sz, {0LL});
     }
- 
-    item single(int x) {
-        return {x};
-    }
- 
-    item operation(item a, item b) { // assign operation
-        if (b.v == NO_OP.v)
-            return a;
+
+    item merge(item a, item b) {
+        if (a.v <= b.v) return a;
         return b;
     }
- 
-    void apply_operation(item &a, item b) {
-        a = operation(a, b);
+
+    void propagate(int l, int r, int x) {
+        if (lazy[x].v == 0) return;
+        if (l != r) {
+            lazy[2 * x + 1].v += lazy[x].v;
+            lazy[2 * x + 2].v += lazy[x].v;
+        }
+        seg[x].v += lazy[x].v;
+        lazy[x].v = 0;
     }
- 
-    void propagte(int x, int lx, int rx) {
-        if (rx - lx == 1 || operations[x].v == NO_OP.v) // leaf node
-            return;
-        apply_operation(operations[x * 2 + 1], operations[x]);
-        apply_operation(operations[x * 2 + 2], operations[x]);
-        operations[x] = NO_OP;
-    }
- 
-    void modify(int l, int r, int v, int x, int lx, int rx) {
-        propagte(x, lx, rx);
-        if (rx <= l || lx >= r)
-            return;
-        if (lx >= l && rx <= r) {
-            apply_operation(operations[x], {v});
+
+    void update(int l, int r, int x, int lx, int rx, ll val) {
+        propagate(l, r, x);
+        if (l > rx || r < lx) return;
+        if (l >= lx && r <= rx) {
+            lazy[x].v += val;
+            propagate(l, r, x);
             return;
         }
-        int m = (lx + rx) / 2;
-        modify(l, r, v, 2 * x + 1, lx, m);
-        modify(l, r, v, 2 * x + 2, m, rx);
+        ll mid = (l + r) / 2;
+        update(l, mid, 2 * x + 1, lx, rx, val);
+        update(mid + 1, r, 2 * x + 2, lx, rx, val);
+        seg[x] = merge(seg[2 * x + 1], seg[2 * x + 2]);
     }
- 
-    void modify(int l, int r, int v) {
-        modify(l, r, v, 0, 0, sz);
+
+    void update(int l, int r, ll val) {
+        update(0, sz - 1, 0, l, r, val);
     }
- 
-    item get(int i, int x, int lx, int rx) {
-        propagte(x, lx, rx);
-        if (rx - lx == 1) {
-            return operations[x];
+
+    item calc(int l, int r, int x, int idx) {
+        propagate(l, r, x);
+        if (l == r) {
+            return seg[x];
         }
-        int m = (lx + rx) / 2;
-        if (i < m) {
-            return get(i, x * 2 + 1, lx, m);
+        int mid = (l + r) / 2;
+        if (idx <= mid) {
+            return calc(l, mid, 2 * x + 1, idx);
         } else {
-            return get(i, x * 2 + 2, m, rx);
+            return calc(mid + 1, r, 2 * x + 2, idx);
         }
     }
- 
-    item get(int i) {
-        return get(i, 0, 0, sz);
+
+
+    item calc(int idx) {
+        return calc(0, sz - 1, 0, idx);
     }
 };
